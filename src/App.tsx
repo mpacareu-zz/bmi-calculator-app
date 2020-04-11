@@ -1,8 +1,21 @@
-import React from 'react';
-import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import Home from './pages/Home';
+import React, { useRef, useState } from 'react';
+import {
+  IonApp,
+  IonContent,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonLabel,
+  IonItem,
+  IonInput,
+  IonAlert,
+} from '@ionic/react';
+import BmiControls from './components/BmiControls';
+import BmiResult from './components/BmiResult';
+import InputControls from './components/InputControls';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -22,16 +35,105 @@ import '@ionic/react/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
+import InputControl from './components/InputControls';
 
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonRouterOutlet>
-        <Route path="/home" component={Home} exact={true} />
-        <Route exact path="/" render={() => <Redirect to="/home" />} />
-      </IonRouterOutlet>
-    </IonReactRouter>
-  </IonApp>
-);
+const App: React.FC = () => {
+  // const [showAlertCheckInputs, setShowAlertCheckInputs] = useState(false);
+  const [calculatedBmi, setCalculatedBmi] = useState<number>();
+  const [error, setError] = useState<string>();
+  const [calcUnits, setCalcUnits] = useState<'mkg' | 'ftlbs'>('mkg');
+  const weightInputRef = useRef<HTMLIonInputElement>(null);
+  const heightInputRef = useRef<HTMLIonInputElement>(null);
+
+  const calculateBmi = () => {
+    const enteredHeight = +heightInputRef.current!.value!;
+    const enteredWeight = +weightInputRef.current!.value!;
+
+    if (enteredHeight <= 0 || enteredWeight <= 0) {
+      // setShowAlertCheckInputs(true);
+      setError('Please enter valid (non-negative) numbers!');
+      return;
+    }
+
+    const weightConversionFactor = calcUnits === 'ftlbs' ? 2.2 : 1;
+    const heightConversionfactor = calcUnits === 'ftlbs' ? 3.28 : 1;
+    const weight = enteredWeight / weightConversionFactor;
+    const height = enteredHeight / heightConversionfactor;
+    const bmi = weight / (height * height);
+
+    if (isNaN(bmi)) {
+      alert('Not a number, please check inputs!');
+      return;
+    }
+    setCalculatedBmi(bmi);
+  };
+  const resetInputs = () => {
+    heightInputRef.current!.value = '';
+    weightInputRef.current!.value = '';
+    setCalculatedBmi(undefined);
+  };
+
+  const selectCalcUnitHandler = (selectedValue: 'mkg' | 'ftlbs') => {
+    setCalcUnits(selectedValue);
+  };
+
+  return (
+    <React.Fragment>
+      <IonAlert
+        // isOpen={showAlertCheckInputs}
+        isOpen={!!error}
+        // onDidDismiss={() => setShowAlertCheckInputs(false)}
+        onDidDismiss={() => setError('')}
+        // message={'Please enter valid (non-negative) numbers!'}
+        message={error}
+        buttons={['OK']}
+        // header={'Alert'}
+        // subHeader={'Subtitle'}
+      />
+
+      <IonApp>
+        <IonHeader>
+          <IonToolbar color='primary'>
+            <IonTitle>BMI Calculator</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className='ion-padding'>
+          <IonGrid>
+            <IonRow>
+              <IonCol>
+                <InputControls
+                  selectedValue={calcUnits}
+                  onSelectValue={selectCalcUnitHandler}
+                />
+              </IonCol>
+            </IonRow>
+            <IonRow>
+              <IonCol>
+                <IonItem>
+                  <IonLabel position='floating'>
+                    Your Height ({calcUnits === 'mkg' ? 'meters' : 'feet'})
+                  </IonLabel>
+                  <IonInput type='number' ref={heightInputRef}></IonInput>
+                </IonItem>
+              </IonCol>
+            </IonRow>
+            <IonRow>
+              <IonCol>
+                <IonItem>
+                  <IonLabel position='floating'>
+                    Your Weight ({calcUnits === 'mkg' ? 'kg' : 'lbs'})
+                  </IonLabel>
+                  <IonInput type='number' ref={weightInputRef}></IonInput>
+                </IonItem>
+              </IonCol>
+            </IonRow>
+            <BmiControls onCalculate={calculateBmi} onReset={resetInputs} />
+            {calculatedBmi ? <BmiResult result={calculatedBmi} /> : null}
+          </IonGrid>
+        </IonContent>
+      </IonApp>
+    </React.Fragment>
+  );
+};
 
 export default App;
